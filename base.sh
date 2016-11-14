@@ -37,3 +37,11 @@ function pull_image() {
     run_cmd "docker pull $url"
     run_cmd "docker tag $url $image_name"
 }
+function list_contains() {
+    local var="$1"
+    local str="$2"
+    local val
+
+    eval "val=\" \${$var} \""
+    [ "${val%% $str *}" != "$val" ]
+}

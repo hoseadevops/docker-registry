@@ -7,35 +7,6 @@ SCRIPTFILE=`basename $0`
 
 source $prj_path/base.sh
 
-function usage() {
-	cat <<-EOF
-		Usage: mamanger.sh [options]
-
-		Valid options are:
-
-		    build 
-		    build-registry
-		    build-ui
-
-		    run   
-		    run-registry
-		    run-ui
-
-		    stop
-		    stop-registry
-		    stop-ui
-
-		    restart
-		    restart-registry
-		    restart-ui
-
-		    to-docker-registry
-		    test-push
-
-		    -h                      show this help message and exit
-EOF
-	exit $1
-}
 
 host_ip=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | awk '{print $1}' | head  -1)
 docker_registry_image=registry:2.2
@@ -70,16 +41,11 @@ function run_registry() {
     args="--restart always"
     args="$args -p 11380:5000"
 
-    # mount config
-    args="$args -v $prj_path/config/passwd:/auth/htpasswd"
-
-    # set env variables for auth
-    args="$args -e REGISTRY_AUTH=htpasswd"
-    args="$args -e 'REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm'"
-    args="$args -e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd"
-
     # mount data directory
+    args="$args -v $prj_path:$prj_path"
     args="$args -v $path/docker-registry:/var/lib/registry"
+
+    args="$args -w $prj_path"
 
     run_cmd "docker run -d $args --name $docker_registry_container $docker_registry_image"
 }
@@ -92,12 +58,8 @@ function run_ui() {
     # mount data directory
     args="$args -v $path/docker-registry-ui:/var/lib/registry-ui"
 
-    # TODO
-    ENV_DOCKER_REGISTRY_HOST="docker-registry.sunfund.com"
-    ENV_DOCKER_REGISTRY_PORT=""
-
-    ENV_DOCKER_REGISTRY_HOST="$host_ip"
-    ENV_DOCKER_REGISTRY_PORT="11380"
+    local ENV_DOCKER_REGISTRY_HOST="docker-registry.sunfund.com"
+    local ENV_DOCKER_REGISTRY_PORT=""
 
     # set env variables for auth
     args="$args -e ENV_DOCKER_REGISTRY_HOST=$ENV_DOCKER_REGISTRY_HOST"
@@ -107,9 +69,9 @@ function run_ui() {
 }
 
 # we can run into docker registry container to execute some task, generate password for example.
-function to_docker_registry() {
-    args=""
-    run_cmd "docker run -it --rm $args --entrypoint /bin/bash --name $docker_registry_container_runtime $docker_registry_image"
+function to_registry() {
+    local cmd="bash"
+    run_cmd "docker exec -it $docker_registry_container bash -c '$cmd'"
 }
 
 function run() {
@@ -145,73 +107,41 @@ function restart() {
     restart_ui
 }
 
+function help() {
+    cat <<-EOF
 
-while :; do
-    case $1 in
-        -h|-\?|--help)
-            usage
-            exit
-            ;;
-        run)
+    Usage: mamanger.sh [options]
+
+        Valid options are:
+
             run
-            exit
-            ;;
-        run-registry)
-            run_registry
-            exit
-            ;;
-        run-ui)
-            run_ui
-            exit
-            ;;
-        to-docker-registry)
-            to_docker_registry
-            exit
-            ;;
-        stop)
-            stop
-            exit
-            ;;
-        stop-registry)
-            stop_registry
-            exit
-            ;;
-        stop-ui)
-            stop_ui
-            exit
-            ;;
-        build)
-            build
-            exit
-            ;;
-        build-ui)
-            build_ui
-            exit
-            ;;
-        build-registry)
-            build_registry
-            exit
-            ;;
-        restart)
-            restart
-            exit
-            ;;
-        restart-ui)
-            restart_ui
-            exit
-            ;;
-        restart-registry)
-            restart_registry
-            exit
-            ;;
-        test-push)
-            test_push
-            exit
-            ;;
-        *)
-            usage
-            exit 1
-    esac
 
-    shift
-done
+            run_registry
+            run_ui
+
+            to_registry
+            
+            build
+            build_ui
+            build_registry
+
+            stop
+            stop_uid
+            stop_registry
+
+            restart
+            restart_ui
+            restart_registry
+
+            test_push
+
+            help                      show this help message and exit
+
+EOF
+    exit 1
+}
+
+action=${1:-help}
+ALL_COMMANDS="help run run_registry run_ui to_registry stop stop_registry stop_ui build build_ui build_registry restart restart_ui restart_registry test_push"
+list_contains ALL_COMMANDS "$action" || action=help
+$action "$@"
