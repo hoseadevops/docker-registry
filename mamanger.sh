@@ -7,8 +7,8 @@ SCRIPTFILE=`basename $0`
 
 source $prj_path/base.sh
 
-
 host_ip=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | awk '{print $1}' | head  -1)
+data_path='/opt/data'
 docker_registry_image=registry:2.2
 docker_registry_container=sunfund-registry
 
@@ -37,13 +37,12 @@ function build() {
 }
 
 function run_registry() {
-    local path='/opt/data'
     args="--restart always"
     args="$args -p 11380:5000"
 
     # mount data directory
     args="$args -v $prj_path:$prj_path"
-    args="$args -v $path/docker-registry:/var/lib/registry"
+    args="$args -v $data_path/docker-registry:/var/lib/registry"
 
     args="$args -w $prj_path"
 
@@ -51,12 +50,11 @@ function run_registry() {
 }
 
 function run_ui() {
-    local path='/opt/data'
     args="--restart always"
     args="$args -p 11480:80"
 
     # mount data directory
-    args="$args -v $path/docker-registry-ui:/var/lib/registry-ui"
+    args="$args -v $data_path/docker-registry-ui:/var/lib/registry-ui"
 
     local ENV_DOCKER_REGISTRY_HOST="docker-registry.sunfund.com"
     local ENV_DOCKER_REGISTRY_PORT=""
@@ -126,7 +124,7 @@ function help() {
             build_registry
 
             stop
-            stop_uid
+            stop_ui
             stop_registry
 
             restart
