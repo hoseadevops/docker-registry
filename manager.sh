@@ -8,14 +8,16 @@ SCRIPTFILE=`basename $0`
 source $prj_path/base.sh
 
 host_ip=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | awk '{print $1}' | head  -1)
+
 data_path='/opt/data'
+
 docker_registry_image=registry:2.2
-docker_registry_container=sunfund-registry
+docker_registry_container=hosea-registry
 
 docker_ui_image=konradkleine/docker-registry-frontend:v2
-docker_ui_container=sunfund-registry-ui
+docker_ui_container=hosea-registry-ui
 
-docker_registry_container_runtime=sunfund-registry-c
+docker_registry_container_runtime=hosea-registry-runtime
 
 test_image=nginx:1.11
 
@@ -38,7 +40,7 @@ function build() {
 
 function run_registry() {
     args="--restart always"
-    args="$args -p 11380:5000"
+    args="$args -p 15000:5000"
 
     # mount data directory
     args="$args -v $prj_path:$prj_path"
@@ -51,12 +53,12 @@ function run_registry() {
 
 function run_ui() {
     args="--restart always"
-    args="$args -p 11480:80"
+    args="$args -p 15001:80"
 
     # mount data directory
     args="$args -v $data_path/docker-registry-ui:/var/lib/registry-ui"
 
-    local ENV_DOCKER_REGISTRY_HOST="docker-registry.sunfund.com"
+    local ENV_DOCKER_REGISTRY_HOST="47.93.88.215"
     local ENV_DOCKER_REGISTRY_PORT=""
 
     # set env variables for auth
